@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Stick Fight: World Warriors</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+</head>
+<body>
+<script>
+let gameState = "intro";
+let players = [];
+let portraits = {};
+let music;
+let roundWinner = null;
+let bestOf = { p1: 0, p2: 0 };
+let keys = {};
+
+function preload() {
+  // Load portraits
+  portraits = {
+    liwei: loadImage("https://chatgpt.com/backend-api/estuary/content?id=file_000000006a4461fa83f02e38405e9ac0&ts=489375&p=fs&cid=1&sig=c871fb7dce559985936c4f1d6be62e474074cdfbc596d23932e00a1085ca0bab&v=0"),
+    elpinguino: loadImage("https://chatgpt.com/backend-api/estuary/content?id=file_00000000ec0862309969459bfc625f61&ts=489375&p=fs&cid=1&sig=5a8b2193822c041147908215db0f8cc743a5d15d53b73ef926b555ed0057595a&v=0"),
+    riley: loadImage("https://chatgpt.com/backend-api/estuary/content?id=file_000000000e4861f5af742843a6e99523&ts=489375&p=fs&cid=1&sig=10efbe4badbf89d466ac26b1e0645665d986f6f5bf4a9cf668b7cf82f04ca5d3&v=0"),
+    greta: loadImage("https://chatgpt.com/backend-api/estuary/content?id=file_00000000bbd0622fbeb1ce3518be4e1d&ts=489375&p=fs&cid=1&sig=c047712ff0d48743541ee0c000d7c56374d18838a493fe7dcc415bfe9cbad106&v=0"),
+    akamu: loadImage("https://chatgpt.com/backend-api/estuary/content?id=file_00000000eb94622fac6bcbc23c1ff4c6&ts=489375&p=fs&cid=1&sig=2b9ce76499a0db8f75777337a05757b003a836df235a777107d01ed8218bfce1&v=0")
+  };
+
+  // Load background music
+  soundFormats('mp3');
+  music = loadSound('/mnt/data/def2dd59-90d4-45f6-9ea4-3b4e22f0b18a.mp3');
+}
+
+function setup() {
+  createCanvas(900, 500);
+  textAlign(CENTER, CENTER);
+  textSize(30);
+}
+
+function draw() {
+  background(0);
+  if (gameState === "intro") drawIntro();
+  else if (gameState === "select") drawCharacterSelect();
+  else if (gameState === "fight") drawFight();
+  else if (gameState === "victory") drawVictory();
+}
+
+function drawIntro() {
+  fill(255, 215, 0);
+  textSize(50);
+  text("STICK FIGHT: WORLD WARRIORS", width / 2, height / 2 - 40);
+  fill(255);
+  textSize(25);
+  text("Press ENTER to Begin", width / 2, height / 2 + 60);
+}
+
+function drawCharacterSelect() {
+  background(20);
+  textSize(30);
+  fill(255);
+  text("PLAYER 1 & PLAYER 2 SELECT", width / 2, 40);
+
+  let chars = Object.keys(portraits);
+  let x = 100;
+  let y = 100;
+  for (let i = 0; i < chars.length; i++) {
+    image(portraits[chars[i]], x, y, 140, 140);
+    fill(255);
+    text(chars[i].toUpperCase(), x + 70, y + 160);
+    x += 170;
+  }
+
+  text("Press 1-5 for Player 1 and 6-0 for Player 2", width / 2, height - 40);
+}
+
+function drawFight() {
+  if (!music.isPlaying()) music.loop();
+  background(30, 30, 40);
+  fill(255);
+  textSize(20);
+  text("Round: " + (bestOf.p1 + bestOf.p2 + 1), width / 2, 30);
+  players.forEach(p => p.update());
+  players.forEach(p => p.display());
+
+  // Check for winner each round
+  if (players[0].hp <= 0 || players[1].hp <= 0) {
+    if (players[0].hp > players[1].hp) bestOf.p1++; else bestOf.p2++;
+    if (bestOf.p1 === 2 || bestOf.p2 === 2) {
+      roundWinner = bestOf.p1 === 2 ? players[0].portrait : players[1].portrait;
+      music.stop();
+      gameState = "victory";
+    } else {
+      resetRound();
+    }
+  }
+}
+
+function drawVictory() {
+  background(0);
+  fill(255, 215, 0);
+  textSize(60);
+  text("VICTORY!", width / 2, 80);
+  image(roundWinner, width / 2 - 150, 150, 300, 300);
+  fill(255);
+  textSize(25);
+  text("Press ENTER to return to title", width / 2, 480);
+}
+
+function keyPressed() {
+  keys[key] = true;
+  if (gameState === "intro" && keyCode === ENTER) gameState = "select";
+  else if (gameState === "victory" && keyCode === ENTER) resetGame();
+
+  if (gameState === "select") {
+    if (key === '1') players[0] = makePlayer('liwei', 1);
+    if (key === '2') players[0] = makePlayer('elpinguino', 1);
+    if (key === '3') players[0] = makePlayer('riley', 1);
+    if (key === '4') players[0] = makePlayer('greta', 1);
+    if (key === '5') players[0] = makePlayer('akamu', 1);
+    if (key === '6') players[1] = makePlayer('liwei', 2);
+    if (key === '7') players[1] = makePlayer('elpinguino', 2);
+    if (key === '8') players[1] = makePlayer('riley', 2);
+    if (key === '9') players[1] = makePlayer('greta', 2);
+    if (key === '0') players[1] = makePlayer('akamu', 2);
+
+    if (players.length === 2 && players[0] && players[1]) gameState = "fight";
+  }
+}
+
+function keyReleased() {
+  keys[key] = false;
+}
+
+function makePlayer(type, id) {
+  let x = id === 1 ? 200 : 700;
+  let col = id === 1 ? color(100, 200, 255) : color(255, 100, 100);
+  return {
+    id: id,
+    type: type,
+    x: x,
+    y: height - 120,
+    hp: 100,
+    w: 30,
+    h: 90,
+    portrait: portraits[type],
+    atkTimer: 0,
+    update() {
+      if (this.atkTimer > 0) this.atkTimer--;
+      // Movement
+      if (id === 1) {
+        if (keys['A']) this.x -= 5;
+        if (keys['D']) this.x += 5;
+        if (keys['Q'] && this.atkTimer === 0) this.special();
+        if (keys[' ']) this.attack();
+      } else {
+        if (keys["ArrowLeft"]) this.x -= 5;
+        if (keys["ArrowRight"]) this.x += 5;
+        if (keys['O'] && this.atkTimer === 0) this.special();
+        if (keys["Enter"]) this.attack();
+      }
+    },
+    display() {
+      fill(col);
+      rect(this.x, this.y, this.w, this.h, 5);
+      // HP Bars
+      fill(0, 255, 0);
+      rect(id === 1 ? 20 : width - 220, 20, this.hp * 2, 20);
+    },
+    attack() {
+      if (this.atkTimer === 0) {
+        this.atkTimer = 30;
+        let opp = players.find(p => p.id !== this.id);
+        if (abs(this.x - opp.x) < 50) opp.hp -= 10;
+      }
+    },
+    special() {
+      this.atkTimer = 100;
+      let opp = players.find(p => p.id !== this.id);
+      let dmg = 0;
+      switch (this.type) {
+        case 'liwei': dmg = 30; break;
+        case 'elpinguino': dmg = 35; break;
+        case 'riley': dmg = 28; break;
+        case 'greta': dmg = 25; break;
+        case 'akamu': dmg = 40; break;
+      }
+      if (abs(this.x - opp.x) < 80) opp.hp -= dmg;
+    }
+  };
+}
+
+function resetRound() {
+  players[0].hp = 100;
+  players[1].hp = 100;
+  players[0].x = 200;
+  players[1].x = 700;
+}
+
+function resetGame() {
+  bestOf = { p1: 0, p2: 0 };
+  players = [];
+  roundWinner = null;
+  gameState = "intro";
+}
+</script>
+</body>
+</html>
